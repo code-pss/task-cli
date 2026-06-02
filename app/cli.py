@@ -1,11 +1,13 @@
 import sys
 from app.manager import TaskManager, VALID_STATUSES
+from app.storage import Storage
 from app import display
 from rich import print as rprint
 from rich.console import Console
 
 console  = Console()
-manager  = TaskManager()
+storage  = Storage()
+manager  = TaskManager(storage)
 
 
 # ── Help ─────────────────────────────────────────────────────────────────────
@@ -94,13 +96,16 @@ def cmd_add(pos, flags):
         return
     title   = " ".join(pos)
     context = flags.get("c", flags.get("context", ""))
-    task    = manager.add(title, context)
-    console.print()
-    rprint(f"[bright_green]Initialized task[/bright_green] [grey58]#{task.id}[/grey58]")
-    rprint(f"[bright_green]→[/bright_green] [bright_green bold]{task.title}[/bright_green bold]")
-    if task.context:
-        rprint(f"  [grey58]{task.context}[/grey58]")
-    console.print()
+    try:
+        task = manager.add(title, context)
+        console.print()
+        rprint(f"[bright_green]Initialized task[/bright_green] [grey58]#{task.id}[/grey58]")
+        rprint(f"[bright_green]>>[/bright_green] [bright_green bold]{task.title}[/bright_green bold]")
+        if task.context:
+            rprint(f"  [grey58]{task.context}[/grey58]")
+        console.print()
+    except Exception as e:
+        display.error(str(e))
 
 
 def cmd_commit(pos, flags):
@@ -126,7 +131,7 @@ def cmd_push(pos, flags):
         task = manager.push(status)
         console.print()
         rprint(f"[bright_green]Pushed[/bright_green] [grey58]#{task.id}[/grey58] [bright_green bold]{task.title}[/bright_green bold]")
-        rprint(f"  [grey58]status →[/grey58] {display._status_badge(task.status)}")
+        rprint(f"  [grey58]status >>[/grey58] {display._status_badge(task.status)}")
         console.print()
     except ValueError as e:
         display.error(str(e))
@@ -192,6 +197,10 @@ def cmd_delete(pos, flags):
         display.error(str(e))
 
 
+def cmd_clear(pos, flags):
+    console.clear()
+
+
 # ── Router ────────────────────────────────────────────────────────────────────
 
 COMMANDS = {
@@ -204,6 +213,8 @@ COMMANDS = {
     "show":     cmd_show,
     "search":   cmd_search,
     "delete":   cmd_delete,
+    "clear":    cmd_clear,
+    "cls":      cmd_clear,
     "help":     lambda p, f: print_help(),
 }
 

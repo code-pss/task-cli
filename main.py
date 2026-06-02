@@ -21,12 +21,17 @@ def main():
         if raw in ("exit", "quit", "q"):
             rprint("\n[grey58]bye.[/grey58]\n")
             break
+        if raw.lower() in ("clear", "cls"):
+            console.clear()
+            continue
 
         try:
             tokens = shlex.split(raw)
             run(tokens)
-        except Exception as e:
+        except ValueError as e:
             rprint(f"[bright_red]error:[/bright_red] [grey58]{e}[/grey58]")
+        except Exception as e:
+            rprint(f"[bright_red]unexpected error:[/bright_red] [grey58]{e}[/grey58]")
 
 
 if __name__ == "__main__":

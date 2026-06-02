@@ -30,27 +30,31 @@ STATUS_COLOR = {
 }
 
 STATUS_ICON = {
-    "pending":     "○",
-    "in-progress": "◉",
-    "on-hold":     "◌",
-    "review":      "◎",
-    "complete":    "●",
-    "dropped":     "✕",
+    "pending":     "[ ]",
+    "in-progress": "[>]",
+    "on-hold":     "[=]",
+    "review":      "[?]",
+    "complete":    "[v]",
+    "dropped":     "[x]",
 }
 
 
-def _status_badge(status: str) -> str:
-    color = STATUS_COLOR.get(status, "white")
-    icon  = STATUS_ICON.get(status, "?")
-    return f"[{color}]{icon} {status}[/{color}]"
+def _status_badge(status) -> str:
+    # Handle Status Enum or string
+    val = status.value if hasattr(status, "value") else str(status)
+    color = STATUS_COLOR.get(val, "white")
+    icon  = STATUS_ICON.get(val, "?")
+    return f"[{color}]{icon} {val}[/{color}]"
 
 
-def _fmt_time(iso: str) -> str:
+def _fmt_time(val) -> str:
+    if isinstance(val, datetime):
+        return val.strftime("%Y-%m-%d %H:%M")
     try:
-        dt = datetime.fromisoformat(iso)
+        dt = datetime.fromisoformat(str(val))
         return dt.strftime("%Y-%m-%d %H:%M")
     except Exception:
-        return iso
+        return str(val)
 
 
 # ── Task Table ───────────────────────────────────────────────────────────────
@@ -78,7 +82,7 @@ def render_tasks(tasks: list[Task], active_id: int = None, title: str = "Tasks")
     table.add_column("Updated", style=THEME["dim"],   width=16)
 
     for t in tasks:
-        marker = f"[{THEME['primary']}]→[/{THEME['primary']}]" if t.id == active_id else ""
+        marker = f"[{THEME['primary']}]>>[/{THEME['primary']}]" if t.id == active_id else ""
         table.add_row(
             marker,
             str(t.id),
@@ -109,7 +113,7 @@ def render_log(task: Task, commits: list[Commit]) -> None:
     for i, c in enumerate(reversed(commits)):
         is_last = i == 0
         color   = THEME["primary"] if is_last else THEME["dim"]
-        dot     = "●" if is_last else "○"
+        dot     = "*" if is_last else "o"
 
         rprint(f"  [{color}]{dot}[/{color}]  [{color}]{c.message}[/{color}]")
         rprint(f"       [{THEME['dim']}]{_status_badge(c.status)}  ·  {_fmt_time(c.timestamp)}[/{THEME['dim']}]")
@@ -137,13 +141,14 @@ def render_status(task: Task, active: bool = True) -> None:
     if task.commits:
         last = task.last_commit
         lines.append(f"[{THEME['dim']}]Last commit:[/{THEME['dim']}]")
-        lines.append(f"  [{THEME['primary']}]● {last.message}[/{THEME['primary']}]")
+        lines.append(f"  [{THEME['primary']}]* {last.message}[/{THEME['primary']}]")
         lines.append(f"    [{THEME['dim']}]{_fmt_time(last.timestamp)}[/{THEME['dim']}]")
     else:
         lines.append(f"[{THEME['dim']}]No commits yet.[/{THEME['dim']}]")
 
+    content = Text.from_markup("\n".join(lines))
     panel = Panel(
-        "\n".join(lines),
+        content,
         border_style = THEME["border"],
         padding      = (1, 2),
     )
@@ -164,6 +169,6 @@ def info(msg: str):
 
 def commit_line(task: Task, commit: Commit):
     rprint(f"[{THEME['primary']}][task #{task.id}][/{THEME['primary']}] [{THEME['dim']}]{task.title}[/{THEME['dim']}]")
-    rprint(f"  [{THEME['primary']}]● {commit.message}[/{THEME['primary']}]")
+    rprint(f"  [{THEME['primary']}]* {commit.message}[/{THEME['primary']}]")
     rprint(f"    [{THEME['dim']}]{_status_badge(commit.status)}  ·  {_fmt_time(commit.timestamp)}[/{THEME['dim']}]")
     console.print()
